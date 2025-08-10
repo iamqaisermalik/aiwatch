@@ -585,11 +585,41 @@ class AIWatchInterface {
   clickElement(selector) {
     const elements = this.findElements(selector);
     if (elements.length > 0) {
-      elements[0].click();
-      this.showActionFeedback(`Clicked: ${selector}`);
+      const element = elements[0];
+      
+      // Scroll element into view
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Wait a moment then click
+      setTimeout(() => {
+        // Try multiple click methods
+        try {
+          // Method 1: Regular click
+          element.click();
+        } catch (e) {
+          // Method 2: Dispatch click event
+          try {
+            element.dispatchEvent(new MouseEvent('click', {
+              view: window,
+              bubbles: true,
+              cancelable: true,
+              buttons: 1
+            }));
+          } catch (e2) {
+            // Method 3: Focus and Enter for form elements
+            if (element.tagName === 'BUTTON' || element.type === 'submit') {
+              element.focus();
+              element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            }
+          }
+        }
+        
+        this.showActionFeedback(`✅ Clicked: ${element.tagName.toLowerCase()}${element.textContent ? ` "${element.textContent.trim().substring(0, 20)}"` : ''}`);
+      }, 300);
+      
       return true;
     }
-    this.showActionFeedback(`Could not find element: ${selector}`, 'error');
+    this.showActionFeedback(`❌ Could not find element to click: "${selector}"`, 'error');
     return false;
   }
 
@@ -597,15 +627,43 @@ class AIWatchInterface {
     const elements = this.findElements(selector);
     if (elements.length > 0) {
       const element = elements[0];
-      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-        element.value = value;
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-        this.showActionFeedback(`Filled "${selector}" with: ${value}`);
+      
+      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT') {
+        // Scroll into view
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        setTimeout(() => {
+          // Focus first
+          element.focus();
+          
+          // Clear existing content
+          element.value = '';
+          
+          // Set new value
+          element.value = value;
+          
+          // Trigger events that frameworks expect
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+          element.dispatchEvent(new Event('keyup', { bubbles: true }));
+          
+          // For React/Vue compatibility
+          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+          if (nativeInputValueSetter) {
+            nativeInputValueSetter.call(element, value);
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          
+          this.showActionFeedback(`✅ Filled ${element.tagName.toLowerCase()}${element.placeholder ? ` "${element.placeholder}"` : ''} with: "${value}"`);
+        }, 300);
+        
         return true;
+      } else {
+        this.showActionFeedback(`❌ Element is not fillable: ${element.tagName}`, 'error');
+        return false;
       }
     }
-    this.showActionFeedback(`Could not fill element: ${selector}`, 'error');
+    this.showActionFeedback(`❌ Could not find form element: "${selector}"`, 'error');
     return false;
   }
 
@@ -636,33 +694,101 @@ class AIWatchInterface {
   }
 
   findElements(selector) {
-    // Try multiple ways to find elements
+    console.log('Looking for elements with selector:', selector);
+    
     try {
-      // Direct selector
-      let elements = Array.from(document.querySelectorAll(selector));
-      if (elements.length > 0) return elements;
+      let elements = [];
+      
+      // 1. Try direct CSS selector first
+      try {
+        elements = Array.from(document.querySelectorAll(selector));
+        if (elements.length > 0) {
+          console.log('Found by CSS selector:', elements);
+          return elements;
+        }
+      } catch (e) {
+        // Invalid CSS selector, continue to other methods
+      }
 
-      // Try finding by text content
-      elements = Array.from(document.querySelectorAll('*')).filter(el => {
-        return el.textContent && el.textContent.toLowerCase().includes(selector.toLowerCase());
-      });
-      if (elements.length > 0) return elements.slice(0, 5); // Limit results
+      // 2. Try finding by ID (case-insensitive)
+      const byId = document.querySelector(`#${selector}`);
+      if (byId) {
+        console.log('Found by ID:', byId);
+        return [byId];
+      }
 
-      // Try finding by placeholder
+      // 3. Try finding by name attribute
+      elements = Array.from(document.querySelectorAll(`[name="${selector}"]`));
+      if (elements.length > 0) {
+        console.log('Found by name attribute:', elements);
+        return elements;
+      }
+
+      // 4. Try finding by placeholder (case-insensitive)
       elements = Array.from(document.querySelectorAll('input, textarea')).filter(el => {
         return el.placeholder && el.placeholder.toLowerCase().includes(selector.toLowerCase());
       });
-      if (elements.length > 0) return elements;
+      if (elements.length > 0) {
+        console.log('Found by placeholder:', elements);
+        return elements;
+      }
 
-      // Try finding by aria-label
+      // 5. Try finding by aria-label
       elements = Array.from(document.querySelectorAll('[aria-label]')).filter(el => {
-        return el.getAttribute('aria-label').toLowerCase().includes(selector.toLowerCase());
+        return el.getAttribute('aria-label') && el.getAttribute('aria-label').toLowerCase().includes(selector.toLowerCase());
       });
-      if (elements.length > 0) return elements;
+      if (elements.length > 0) {
+        console.log('Found by aria-label:', elements);
+        return elements;
+      }
+
+      // 6. Try finding buttons/links by text content (more specific)
+      elements = Array.from(document.querySelectorAll('button, a, input[type="submit"], input[type="button"]')).filter(el => {
+        const text = (el.textContent || el.value || '').toLowerCase();
+        return text.includes(selector.toLowerCase());
+      });
+      if (elements.length > 0) {
+        console.log('Found buttons by text:', elements);
+        return elements;
+      }
+
+      // 7. Try finding form inputs by associated labels
+      const labels = Array.from(document.querySelectorAll('label')).filter(label => {
+        return label.textContent && label.textContent.toLowerCase().includes(selector.toLowerCase());
+      });
+      for (const label of labels) {
+        if (label.getAttribute('for')) {
+          const input = document.getElementById(label.getAttribute('for'));
+          if (input) {
+            console.log('Found by label association:', input);
+            return [input];
+          }
+        }
+        // Check if input is inside label
+        const innerInput = label.querySelector('input, textarea, select');
+        if (innerInput) {
+          console.log('Found input inside label:', innerInput);
+          return [innerInput];
+        }
+      }
+
+      // 8. Last resort: find by partial text content (limited scope)
+      elements = Array.from(document.querySelectorAll('button, a, span, div')).filter(el => {
+        return el.textContent && 
+               el.textContent.trim().length > 0 && 
+               el.textContent.toLowerCase().includes(selector.toLowerCase()) &&
+               el.offsetParent !== null; // Only visible elements
+      });
+      if (elements.length > 0) {
+        console.log('Found by text content:', elements.slice(0, 3));
+        return elements.slice(0, 3); // Limit results
+      }
 
     } catch (error) {
       console.error('Error finding elements:', error);
     }
+    
+    console.log('No elements found for selector:', selector);
     return [];
   }
 
