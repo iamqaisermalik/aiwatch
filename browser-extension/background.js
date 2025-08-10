@@ -8,7 +8,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     // Set default settings
     chrome.storage.sync.set({
       enabled: true,
-      apiUrl: 'https://aiwatch-nmtyvwy63-qaisers-projects-e9dbc08b.vercel.app/api'
+      apiUrl: 'https://aiwatch-nine.vercel.app/api'
     });
     
     console.log('AIWatch: Extension installed successfully');

@@ -11,7 +11,7 @@ class AIWatchInterface {
     this.isSpeaking = false;
     this.recognition = null;
     this.synth = null;
-    this.apiUrl = 'https://aiwatch-nmtyvwy63-qaisers-projects-e9dbc08b.vercel.app/api';
+    this.apiUrl = 'https://aiwatch-nine.vercel.app/api';
     
     this.init();
   }

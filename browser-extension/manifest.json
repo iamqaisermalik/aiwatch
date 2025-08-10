@@ -13,7 +13,7 @@
   
   "host_permissions": [
     "*://*/*",
-    "https://aiwatch-nmtyvwy63-qaisers-projects-e9dbc08b.vercel.app/*"
+    "https://aiwatch-nine.vercel.app/*"
   ],
   
   "background": {
