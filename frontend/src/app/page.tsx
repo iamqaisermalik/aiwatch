@@ -6,6 +6,7 @@ import Dashboard from '@/components/Dashboard';
 
 export default function HomePage() {
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -51,7 +52,10 @@ export default function HomePage() {
               </p>
               
               <div className="flex justify-center space-x-4 mb-12">
-                <button className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                <button 
+                  onClick={() => setShowInstallModal(true)}
+                  className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
                   Install Extension
                 </button>
                 <button className="border border-gray-300 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
@@ -121,6 +125,98 @@ export default function HomePage() {
 
       {/* Floating Chat - Always visible */}
       <FloatingChat />
+
+      {/* Installation Modal */}
+      {showInstallModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">Install AIWatch Extension</h2>
+                <button
+                  onClick={() => setShowInstallModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <span className="text-yellow-600 text-lg mr-2">⚠️</span>
+                    <h3 className="font-semibold text-yellow-800">Important: Use Chrome or Edge</h3>
+                  </div>
+                  <p className="text-yellow-700 text-sm">Safari extensions require complex setup. For testing, use Chrome or Edge instead.</p>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">🚀 Quick Installation (Chrome/Edge)</h3>
+                  
+                  <div className="space-y-3">
+                    <div className="border-l-4 border-blue-400 pl-4">
+                      <h4 className="font-medium text-gray-900">Step 1: Enable Developer Mode</h4>
+                      <ol className="text-sm text-gray-600 mt-1 space-y-1">
+                        <li>1. Open Chrome/Edge</li>
+                        <li>2. Go to <code className="bg-gray-100 px-2 py-1 rounded">chrome://extensions/</code> or <code className="bg-gray-100 px-2 py-1 rounded">edge://extensions/</code></li>
+                        <li>3. Enable "Developer mode" (toggle in top-right corner)</li>
+                      </ol>
+                    </div>
+
+                    <div className="border-l-4 border-green-400 pl-4">
+                      <h4 className="font-medium text-gray-900">Step 2: Load Extension</h4>
+                      <ol className="text-sm text-gray-600 mt-1 space-y-1">
+                        <li>1. Click "Load unpacked"</li>
+                        <li>2. Navigate to: <code className="bg-gray-100 px-2 py-1 rounded text-xs break-all">/Users/qaisermalik/Documents/aiwatch/browser-extension</code></li>
+                        <li>3. Select the folder and click "Open"</li>
+                        <li>4. Extension is now installed! ✅</li>
+                      </ol>
+                    </div>
+
+                    <div className="border-l-4 border-purple-400 pl-4">
+                      <h4 className="font-medium text-gray-900">Step 3: Test the Extension</h4>
+                      <ol className="text-sm text-gray-600 mt-1 space-y-1">
+                        <li>1. Visit any website (e.g., google.com)</li>
+                        <li>2. Look for the AIWatch floating interface at bottom center</li>
+                        <li>3. Click the voice button 🎤 to start talking</li>
+                        <li>4. The AI will respond with voice 🔊</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-900 mb-2">🎤 Voice Features:</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>✅ Voice Commands - Click microphone to speak</li>
+                    <li>✅ Speech Responses - AI speaks back to you</li>
+                    <li>✅ Visual Conversation - See chat history</li>
+                    <li>✅ Context Awareness - Knows what page you're on</li>
+                  </ul>
+                </div>
+
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">🔧 Troubleshooting:</h4>
+                  <ul className="text-sm text-gray-700 space-y-2">
+                    <li><strong>Extension Not Visible:</strong> Check if "Developer mode" is enabled, refresh webpage</li>
+                    <li><strong>Voice Not Working:</strong> Allow microphone permission, use HTTPS sites, use Chrome/Edge</li>
+                    <li><strong>No AI Response:</strong> Check if Vercel app is running and WebSocket connection</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowInstallModal(false)}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Got it!
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
