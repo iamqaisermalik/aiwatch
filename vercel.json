@@ -1,39 +1,15 @@
 {
   "version": 2,
   "name": "aiwatch",
-  "builds": [
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/next"
-    },
-    {
-      "src": "backend/nodejs-api/package.json",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/backend/nodejs-api/src/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "NEXT_PUBLIC_API_URL": "@api_url",
-    "NEXT_PUBLIC_WS_URL": "@ws_url",
-    "ANTHROPIC_API_KEY": "@anthropic_api_key",
-    "SUPABASE_URL": "@supabase_url",
-    "SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_key",
-    "JWT_SECRET": "@jwt_secret"
-  },
   "functions": {
-    "backend/nodejs-api/src/**": {
+    "api/*.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
 }
