@@ -28,7 +28,7 @@ export default function FloatingChat() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Initialize Speech Recognition
-      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
@@ -175,11 +175,11 @@ export default function FloatingChat() {
   return (
     <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 font-sans">
       <div className={`
-        bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 
+        bg-white/20 backdrop-blur-md rounded-3xl shadow-lg border border-white/10 
         transition-all duration-300 ease-out
         ${isExpanded 
           ? 'w-[600px] max-w-[90vw] max-h-[70vh] p-6' 
-          : 'p-4 cursor-pointer hover:shadow-xl'
+          : 'p-4 cursor-pointer hover:shadow-xl hover:bg-white/30'
         }
         animate-in slide-in-from-bottom-5 duration-500
       `}>
@@ -256,7 +256,7 @@ export default function FloatingChat() {
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                         🎤
                       </div>
-                      <div className="flex-1 bg-blue-50 rounded-2xl p-3">
+                      <div className="flex-1 bg-blue-500/10 backdrop-blur-sm rounded-2xl p-3">
                         <p className="text-blue-900 font-medium">{message.content}</p>
                         <span className="text-xs text-blue-600">
                           {message.timestamp.toLocaleTimeString()}
@@ -271,8 +271,8 @@ export default function FloatingChat() {
                         <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                           🤖
                         </div>
-                        <div className="flex-1 bg-gray-50 rounded-2xl p-4">
-                          <p className="text-gray-700 leading-relaxed">{message.content}</p>
+                        <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-2xl p-4">
+                          <p className="text-gray-900 leading-relaxed">{message.content}</p>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-xs text-gray-500">
                               {message.timestamp.toLocaleTimeString()}
@@ -287,7 +287,7 @@ export default function FloatingChat() {
                       </div>
                       
                       {message.suggestion && (
-                        <div className="ml-11 bg-blue-50 border-l-4 border-blue-400 rounded-r-xl p-3">
+                        <div className="ml-11 bg-blue-500/10 backdrop-blur-sm border-l-4 border-blue-400 rounded-r-xl p-3">
                           <div className="text-blue-800 font-semibold text-xs mb-1">Suggestion:</div>
                           <p className="text-blue-700 text-sm">{message.suggestion}</p>
                         </div>
@@ -302,11 +302,11 @@ export default function FloatingChat() {
                   <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                     🤖
                   </div>
-                  <div className="bg-gray-50 rounded-2xl p-4">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
                     <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce"></div>
                     </div>
                   </div>
                 </div>
