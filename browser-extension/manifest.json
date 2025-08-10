@@ -12,9 +12,8 @@
   ],
   
   "host_permissions": [
-    "http://localhost:*/*",
-    "https://localhost:*/*",
-    "*://*/*"
+    "*://*/*",
+    "https://aiwatch-nmtyvwy63-qaisers-projects-e9dbc08b.vercel.app/*"
   ],
   
   "background": {

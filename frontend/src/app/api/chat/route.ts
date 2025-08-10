@@ -7,12 +7,22 @@ if (!ANTHROPIC_API_KEY) {
 }
 
 export async function POST(request: NextRequest) {
+  // Add CORS headers
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
   try {
     const body = await request.json();
     const { message, context } = body;
 
     if (!message) {
-      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Message is required' }, { 
+        status: 400,
+        headers 
+      });
     }
 
     if (!ANTHROPIC_API_KEY) {
@@ -20,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         error: 'AI service not configured',
         response: 'Sorry, the AI service is not properly configured. Please check the server settings.'
-      }, { status: 500 });
+      }, { status: 500, headers });
     }
 
     // Prepare context information for Claude
@@ -60,7 +70,7 @@ Please provide a helpful, contextual response based on the page content and thei
       return NextResponse.json({ 
         error: 'AI service error',
         response: 'Sorry, I encountered an error processing your request. Please try again in a moment.'
-      }, { status: 500 });
+      }, { status: 500, headers });
     }
 
     const data = await response.json();
@@ -69,20 +79,36 @@ Please provide a helpful, contextual response based on the page content and thei
     return NextResponse.json({ 
       response: aiResponse,
       suggestions: [] // Can add suggestions later
-    });
+    }, { headers });
 
   } catch (error) {
     console.error('Chat API error:', error);
     return NextResponse.json({ 
       error: 'Internal server error',
       response: 'Sorry, I encountered an error. Please try again.'
-    }, { status: 500 });
+    }, { status: 500, headers });
   }
 }
 
 export async function GET() {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
   return NextResponse.json({ 
     status: 'AIWatch Chat API is running',
     timestamp: new Date().toISOString()
-  });
+  }, { headers });
+}
+
+export async function OPTIONS() {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  return new NextResponse(null, { status: 200, headers });
 }
