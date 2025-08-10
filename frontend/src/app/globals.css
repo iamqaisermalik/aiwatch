@@ -26,10 +26,10 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-gray-200;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white text-gray-900;
   }
 }
 
@@ -39,7 +39,7 @@
   }
   
   .chat-bubble.user {
-    @apply bg-primary-500 text-white ml-auto rounded-br-md;
+    @apply bg-blue-500 text-white ml-auto rounded-br-md;
   }
   
   .chat-bubble.assistant {
