@@ -33,17 +33,34 @@ export async function POST(request: NextRequest) {
       }, { status: 500, headers });
     }
 
-    // Prepare context information for Claude
+    // Enhanced agentic context processing
+    const isAgenticMode = context?.isAgenticMode;
+    const pageKnowledge = context?.pageKnowledge;
+    
+    // Prepare comprehensive context for Claude
     const contextInfo = context ? `
-You are AIWatch, an intelligent web assistant that can understand and interact with web pages. 
+You are AIWatch, an AGENTIC AI web assistant with deep intelligence and real-time page analysis capabilities.
 
-CURRENT PAGE CONTEXT:
+${isAgenticMode ? '🤖 AGENTIC MODE ACTIVE - You have comprehensive page knowledge and can make intelligent decisions.' : ''}
+
+CURRENT PAGE ANALYSIS:
 - URL: ${context.url || 'unknown'}
 - Title: ${context.title || 'unknown'}
 - Page Type: ${context.pageType || 'general'}
-- Page Content: ${context.content || 'unavailable'}
 
-USER MESSAGE: "${message}"
+${pageKnowledge ? `
+COMPREHENSIVE PAGE KNOWLEDGE:
+- Interactive Buttons: ${JSON.stringify(pageKnowledge.allButtons?.slice(0, 10) || [])}
+- Navigation Links: ${JSON.stringify(pageKnowledge.allLinks?.slice(0, 10) || [])}
+- Form Inputs: ${JSON.stringify(pageKnowledge.allInputs?.slice(0, 10) || [])}
+- Page Headings: ${JSON.stringify(pageKnowledge.headings?.slice(0, 5) || [])}
+- Navigation Elements: ${JSON.stringify(pageKnowledge.navigation?.slice(0, 10) || [])}
+- Forms Available: ${JSON.stringify(pageKnowledge.forms || [])}
+- Page Metadata: ${JSON.stringify(pageKnowledge.metadata || {})}
+- Viewport Info: ${JSON.stringify(pageKnowledge.viewport || {})}
+` : `- Page Content: ${context.content || 'unavailable'}`}
+
+USER COMMAND: "${message}"
 
 CAPABILITIES:
 You can help users interact with the current webpage through these actions:
@@ -52,20 +69,43 @@ You can help users interact with the current webpage through these actions:
 3. SCROLL to elements - Use: [ACTION:SCROLL:selector]
 4. HIGHLIGHT elements - Use: [ACTION:HIGHLIGHT:selector]
 
-IMPORTANT INSTRUCTIONS:
+${isAgenticMode ? `
+AGENTIC INTELLIGENCE INSTRUCTIONS:
+- You have COMPLETE knowledge of all page elements, their positions, text content, and interactions
+- ANALYZE the page knowledge before responding - you can see ALL buttons, links, forms, inputs
+- When user requests an action, INTELLIGENTLY match their request to the EXACT elements available
+- Use the comprehensive page data to find the BEST matching element
+- If user says "click API", look through ALL links and buttons to find one containing "API" text
+- Be PROACTIVE and suggest related actions based on page content
+- Always explain what you found and why you chose that specific element
+
+INTELLIGENT ELEMENT MATCHING:
+- Match user requests to actual page elements using the comprehensive knowledge provided
+- For "click API" - search through allLinks and allButtons for any containing "api" or "API"
+- For "fill email" - search through allInputs for email fields, email placeholders, or email types
+- Be smart about partial matches - "login" can match "Sign In", "Log In", "Login", etc.
+- Explain your reasoning: "I found an 'API' link in the navigation" or "I located the email input field"
+
+RESPONSE FORMAT:
+- Always respond conversationally first
+- Include action commands when you find matching elements
+- Explain what you found and why you're taking that action
+- If no exact match, suggest alternatives from available elements
+
+` : `
+BASIC INSTRUCTIONS:
 - If the user wants to click something, respond with [ACTION:CLICK:selector] where selector is the element identifier
 - If the user wants to fill a form, respond with [ACTION:FILL:selector:value]
 - If the user wants to scroll to something, respond with [ACTION:SCROLL:selector]
-- You can use text content, IDs, classes, or descriptions as selectors
 - Always provide a conversational response ALONG with any actions
-- Keep responses helpful and contextual to the page content
+`}
 
 Examples:
-- "Click the login button" → [ACTION:CLICK:login] Click the login button for you!
-- "Fill the email field with test@email.com" → [ACTION:FILL:email:test@email.com] I've filled the email field with test@email.com
-- "Scroll to the footer" → [ACTION:SCROLL:footer] Scrolling to the footer now!
+- "Click the login button" → I found the login button! [ACTION:CLICK:login] Clicking it now.
+- "Fill the email field with test@email.com" → I see the email input field. [ACTION:FILL:email:test@email.com] Filling it with your email.
+- "Click API" → I found an "API" link in the navigation menu! [ACTION:CLICK:api] Taking you there now.
 
-Respond conversationally while including action commands when needed.
+${isAgenticMode ? 'Use your comprehensive page knowledge to make intelligent decisions about which elements to interact with.' : 'Respond conversationally while including action commands when needed.'}
     ` : message;
 
     // Call Claude API

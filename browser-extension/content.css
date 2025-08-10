@@ -49,6 +49,41 @@
   padding: 12px 18px !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
+  flex-wrap: wrap !important;
+}
+
+.aiwatch-status {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  margin-bottom: 8px !important;
+}
+
+.aiwatch-status-text {
+  font-size: 11px !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.aiwatch-status-indicator {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  transition: all 0.3s ease !important;
+}
+
+.aiwatch-status-indicator.ready {
+  background: #10b981 !important;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4) !important;
+}
+
+.aiwatch-status-indicator.analyzing {
+  background: #f59e0b !important;
+  animation: pulse 1s ease-in-out infinite !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.6) !important;
 }
 
 .aiwatch-sparkle-icon {

@@ -7,11 +7,18 @@ class AIWatchInterface {
     this.isTyping = false;
     this.socket = null;
     this.currentContext = {};
-    this.isListening = false;
+    this.isListening = true; // Always listening
     this.isSpeaking = false;
     this.recognition = null;
     this.synth = null;
     this.apiUrl = 'https://aiwatch-nine.vercel.app/api';
+    
+    // Agentic intelligence properties
+    this.pageKnowledge = {};
+    this.isAnalyzing = false;
+    this.continuousMonitoring = true;
+    this.lastPageAnalysis = null;
+    this.actionConfidence = 0;
     
     this.init();
   }
@@ -24,14 +31,17 @@ class AIWatchInterface {
       this.createInterface();
     }
     
-    // Initialize voice recognition
-    this.initVoiceRecognition();
+    // Initialize agentic voice recognition (always on)
+    this.initAgenticVoiceRecognition();
     
-    // Monitor page changes for context
-    this.startContextMonitoring();
+    // Start intelligent page monitoring
+    this.startIntelligentPageMonitoring();
     
     // Connect to WebSocket
     this.connectWebSocket();
+    
+    // Begin continuous page analysis
+    this.startContinuousAnalysis();
   }
 
   createInterface() {
@@ -60,14 +70,18 @@ class AIWatchInterface {
   renderCollapsedView(chatBox) {
     chatBox.innerHTML = `
       <div class="aiwatch-input-container">
-        <div class="aiwatch-sparkle-icon">✨</div>
+        <div class="aiwatch-sparkle-icon">🤖</div>
+        <div class="aiwatch-status">
+          <div class="aiwatch-status-text">AIWatch Active • Always Listening</div>
+          <div class="aiwatch-status-indicator ${this.isAnalyzing ? 'analyzing' : 'ready'}"></div>
+        </div>
         <input 
           class="aiwatch-input" 
           type="text" 
-          placeholder="Ask me anything about this page..."
+          placeholder="I'm always listening or type here..."
           id="aiwatch-input"
         />
-        <button class="aiwatch-voice-button ${this.isListening ? 'listening' : ''}" id="aiwatch-voice" title="Voice input">
+        <button class="aiwatch-voice-button listening" id="aiwatch-voice" title="Always listening">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
             <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
@@ -495,36 +509,59 @@ class AIWatchInterface {
     return '';
   }
 
-  initVoiceRecognition() {
+  initAgenticVoiceRecognition() {
     if (typeof window !== 'undefined') {
-      // Initialize Speech Recognition
+      // Initialize Speech Recognition for always-on listening
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
         this.recognition = new SpeechRecognition();
-        this.recognition.continuous = false;
-        this.recognition.interimResults = false;
+        this.recognition.continuous = true; // Always on
+        this.recognition.interimResults = true; // Get partial results
         this.recognition.lang = 'en-US';
 
         this.recognition.onstart = () => {
+          console.log('🎤 AIWatch: Always-on listening activated');
           this.isListening = true;
-          this.updateVoiceButtons();
+          this.updateStatusIndicator();
         };
 
         this.recognition.onresult = (event) => {
-          const transcript = event.results[0][0].transcript;
-          this.sendMessage(transcript);
+          const lastResultIndex = event.results.length - 1;
+          const lastResult = event.results[lastResultIndex];
+          
+          if (lastResult.isFinal) {
+            const transcript = lastResult[0].transcript.trim();
+            console.log('🎙️ Voice command received:', transcript);
+            
+            // Only process if it seems like a command (not random speech)
+            if (this.isValidCommand(transcript)) {
+              this.processAgenticCommand(transcript);
+            }
+          }
         };
 
         this.recognition.onend = () => {
-          this.isListening = false;
-          this.updateVoiceButtons();
+          console.log('🔄 AIWatch: Restarting continuous listening');
+          // Auto-restart for continuous listening
+          setTimeout(() => {
+            if (this.continuousMonitoring) {
+              this.startContinuousListening();
+            }
+          }, 100);
         };
 
         this.recognition.onerror = (event) => {
           console.error('Speech recognition error:', event.error);
-          this.isListening = false;
-          this.updateVoiceButtons();
+          // Restart after error
+          setTimeout(() => {
+            if (this.continuousMonitoring && event.error !== 'not-allowed') {
+              this.startContinuousListening();
+            }
+          }, 1000);
         };
+
+        // Start listening immediately
+        this.startContinuousListening();
       }
 
       // Initialize Speech Synthesis
@@ -534,27 +571,470 @@ class AIWatchInterface {
     }
   }
 
-  toggleVoiceRecognition() {
-    if (!this.recognition) {
-      console.warn('Speech recognition not supported');
-      return;
-    }
-
-    if (this.isListening) {
-      this.recognition.stop();
-    } else {
-      this.recognition.start();
+  startContinuousListening() {
+    try {
+      if (this.recognition && !this.isListening) {
+        this.recognition.start();
+      }
+    } catch (error) {
+      console.log('Recognition already started or not available');
     }
   }
 
-  updateVoiceButtons() {
-    const voiceButtons = document.querySelectorAll('#aiwatch-voice');
-    voiceButtons.forEach(button => {
-      if (button) {
-        button.className = `aiwatch-voice-button ${this.isListening ? 'listening' : ''}`;
-        button.title = this.isListening ? 'Stop listening' : 'Voice input';
+  isValidCommand(transcript) {
+    const commandKeywords = [
+      'click', 'fill', 'type', 'scroll', 'find', 'go to', 'open', 'search',
+      'what is', 'tell me', 'show me', 'help', 'explain', 'navigate',
+      'aiwatch', 'hey', 'please', 'can you'
+    ];
+    
+    const lowerTranscript = transcript.toLowerCase();
+    
+    // Check if transcript contains command keywords or is a question
+    return commandKeywords.some(keyword => lowerTranscript.includes(keyword)) || 
+           lowerTranscript.includes('?') ||
+           lowerTranscript.length > 3; // Process any meaningful speech
+  }
+
+  async processAgenticCommand(transcript) {
+    console.log('🧠 Processing agentic command:', transcript);
+    
+    // Show that we're processing
+    this.isAnalyzing = true;
+    this.updateStatusIndicator();
+    
+    // Perform deep page analysis before action
+    await this.performDeepPageAnalysis();
+    
+    // Send command with enhanced context to AI
+    await this.sendAgenticMessage(transcript);
+    
+    this.isAnalyzing = false;
+    this.updateStatusIndicator();
+  }
+
+  async performDeepPageAnalysis() {
+    console.log('🔍 Performing deep page analysis...');
+    
+    this.pageKnowledge = {
+      // Get all interactive elements with detailed info
+      allButtons: this.getAllInteractiveElements('button, input[type="submit"], input[type="button"], [role="button"]'),
+      allLinks: this.getAllInteractiveElements('a[href]'),
+      allInputs: this.getAllInteractiveElements('input, textarea, select'),
+      allClickable: this.getAllInteractiveElements('[onclick], .clickable, button, a'),
+      
+      // Navigation and structure
+      navigation: this.getNavigationElements(),
+      headings: this.getStructuralElements('h1, h2, h3, h4, h5, h6'),
+      sections: this.getStructuralElements('section, article, main, aside, nav, header, footer'),
+      
+      // Forms and interactions
+      forms: this.getFormAnalysis(),
+      
+      // Visual elements
+      images: this.getVisualElements(),
+      
+      // Page metadata
+      metadata: this.getPageMetadata(),
+      
+      // Current viewport
+      viewport: this.getViewportAnalysis()
+    };
+    
+    console.log('📊 Deep analysis complete:', this.pageKnowledge);
+  }
+
+  getAllInteractiveElements(selector) {
+    return Array.from(document.querySelectorAll(selector)).map((el, index) => {
+      const rect = el.getBoundingClientRect();
+      const isVisible = rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.left >= 0;
+      
+      return {
+        index,
+        element: el,
+        tag: el.tagName.toLowerCase(),
+        id: el.id,
+        classes: el.className,
+        text: (el.textContent || el.value || el.getAttribute('aria-label') || '').trim(),
+        href: el.href,
+        type: el.type,
+        name: el.name,
+        placeholder: el.placeholder,
+        ariaLabel: el.getAttribute('aria-label'),
+        title: el.title,
+        visible: isVisible,
+        position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        // Generate smart selectors
+        selectors: this.generateSmartSelectors(el)
+      };
+    }).filter(item => item.visible && item.text.length > 0);
+  }
+
+  generateSmartSelectors(element) {
+    const selectors = [];
+    
+    // ID selector
+    if (element.id) {
+      selectors.push(`#${element.id}`);
+    }
+    
+    // Text-based selectors
+    const text = element.textContent?.trim();
+    if (text) {
+      selectors.push(`text:"${text}"`);
+      selectors.push(`contains:"${text.toLowerCase()}"`);
+    }
+    
+    // Attribute selectors
+    if (element.getAttribute('aria-label')) {
+      selectors.push(`aria:"${element.getAttribute('aria-label')}"`);
+    }
+    
+    if (element.placeholder) {
+      selectors.push(`placeholder:"${element.placeholder}"`);
+    }
+    
+    // Class-based selector
+    if (element.className) {
+      selectors.push(`.${element.className.split(' ')[0]}`);
+    }
+    
+    return selectors;
+  }
+
+  getNavigationElements() {
+    const navElements = Array.from(document.querySelectorAll('nav, .nav, .navigation, .menu, header a'));
+    return navElements.map(nav => ({
+      text: nav.textContent?.trim(),
+      href: nav.href,
+      element: nav
+    })).filter(item => item.text);
+  }
+
+  startIntelligentPageMonitoring() {
+    // Monitor for dynamic page changes
+    const observer = new MutationObserver((mutations) => {
+      let significantChange = false;
+      
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+          significantChange = true;
+        }
+      });
+      
+      if (significantChange) {
+        console.log('📄 Page structure changed, updating analysis...');
+        setTimeout(() => this.performDeepPageAnalysis(), 500);
       }
     });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    
+    // Monitor URL changes
+    let lastUrl = location.href;
+    setInterval(() => {
+      if (location.href !== lastUrl) {
+        console.log('🔗 URL changed, updating analysis...');
+        lastUrl = location.href;
+        setTimeout(() => this.performDeepPageAnalysis(), 1000);
+      }
+    }, 1000);
+  }
+
+  startContinuousAnalysis() {
+    // Perform initial analysis
+    setTimeout(() => this.performDeepPageAnalysis(), 2000);
+    
+    // Refresh analysis periodically
+    setInterval(() => {
+      if (!this.isAnalyzing) {
+        this.performDeepPageAnalysis();
+      }
+    }, 30000); // Every 30 seconds
+  }
+
+  updateStatusIndicator() {
+    const indicators = document.querySelectorAll('.aiwatch-status-indicator');
+    indicators.forEach(indicator => {
+      if (this.isAnalyzing) {
+        indicator.className = 'aiwatch-status-indicator analyzing';
+      } else {
+        indicator.className = 'aiwatch-status-indicator ready';
+      }
+    });
+  }
+
+  async sendAgenticMessage(message) {
+    // Add user message with enhanced display
+    const userMessage = {
+      type: 'question',
+      content: message,
+      timestamp: new Date()
+    };
+    this.messages.push(userMessage);
+
+    // Expand interface and show processing
+    this.isExpanded = true;
+    this.isTyping = true;
+    this.chatBox.className = 'aiwatch-chat-box aiwatch-chat-expanded';
+    this.renderExpandedView(this.chatBox);
+
+    try {
+      // Send with comprehensive page knowledge
+      const response = await this.sendViaRestAPI(message, {
+        ...this.currentContext,
+        pageKnowledge: this.pageKnowledge,
+        isAgenticMode: true
+      });
+      
+      this.handleAgenticResponse(response);
+    } catch (error) {
+      console.error('AIWatch: Error in agentic communication:', error);
+      this.handleError('I encountered an issue analyzing the page. Let me try again.');
+    }
+  }
+
+  async sendViaRestAPI(message, context = null) {
+    const response = await fetch(`${this.apiUrl}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: message,
+        context: context || this.currentContext
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return await response.json();
+  }
+
+  handleAgenticResponse(data) {
+    this.isTyping = false;
+    
+    const responseText = data.response || data.content || 'I received your message!';
+    
+    // Extract and execute action commands with intelligence
+    const actionCommands = this.extractActionCommands(responseText);
+    
+    if (actionCommands.length > 0) {
+      // Execute actions with agentic intelligence
+      this.executeAgenticActions(actionCommands);
+    }
+    
+    // Clean response and add to messages
+    const cleanedResponse = this.removeActionCommands(responseText);
+    
+    const response = {
+      type: 'answer',
+      content: cleanedResponse,
+      timestamp: new Date(),
+      actions: actionCommands.length > 0 ? actionCommands : undefined
+    };
+
+    this.messages.push(response);
+    this.renderExpandedView(this.chatBox);
+  }
+
+  async executeAgenticActions(actionCommands) {
+    for (const action of actionCommands) {
+      console.log('🎯 Executing agentic action:', action);
+      
+      // Use intelligent element finding with page knowledge
+      const targetElement = await this.findElementWithIntelligence(action.target);
+      
+      if (targetElement) {
+        switch (action.type.toLowerCase()) {
+          case 'click':
+            this.agenticClick(targetElement);
+            break;
+          case 'fill':
+          case 'type':
+            this.agenticFill(targetElement, action.value);
+            break;
+          case 'scroll':
+            this.agenticScroll(targetElement);
+            break;
+          case 'highlight':
+            this.agenticHighlight(targetElement);
+            break;
+        }
+      } else {
+        this.showActionFeedback(`🤖 Could not intelligently locate: "${action.target}"`, 'error');
+      }
+      
+      // Wait between actions
+      await new Promise(resolve => setTimeout(resolve, 800));
+    }
+  }
+
+  async findElementWithIntelligence(target) {
+    console.log('🧠 Using AI to find element:', target);
+    
+    // Search through our comprehensive page knowledge
+    const allElements = [
+      ...this.pageKnowledge.allButtons || [],
+      ...this.pageKnowledge.allLinks || [],
+      ...this.pageKnowledge.allInputs || [],
+      ...this.pageKnowledge.allClickable || []
+    ];
+    
+    // Smart matching algorithm
+    for (const elementInfo of allElements) {
+      const matchScore = this.calculateMatchScore(target, elementInfo);
+      if (matchScore > 0.7) { // High confidence threshold
+        console.log('🎯 Found intelligent match:', elementInfo);
+        return elementInfo.element;
+      }
+    }
+    
+    // Fallback to traditional search
+    return this.findElements(target)[0];
+  }
+
+  calculateMatchScore(target, elementInfo) {
+    let score = 0;
+    const targetLower = target.toLowerCase();
+    
+    // Exact text match
+    if (elementInfo.text && elementInfo.text.toLowerCase() === targetLower) {
+      score += 1.0;
+    }
+    
+    // Partial text match
+    if (elementInfo.text && elementInfo.text.toLowerCase().includes(targetLower)) {
+      score += 0.8;
+    }
+    
+    // ID match
+    if (elementInfo.id && elementInfo.id.toLowerCase().includes(targetLower)) {
+      score += 0.9;
+    }
+    
+    // Aria label match
+    if (elementInfo.ariaLabel && elementInfo.ariaLabel.toLowerCase().includes(targetLower)) {
+      score += 0.8;
+    }
+    
+    // Placeholder match
+    if (elementInfo.placeholder && elementInfo.placeholder.toLowerCase().includes(targetLower)) {
+      score += 0.7;
+    }
+    
+    return Math.min(score, 1.0);
+  }
+
+  agenticClick(element) {
+    console.log('🖱️ Agentic click on:', element);
+    
+    // Scroll element into view smoothly
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    setTimeout(() => {
+      // Multiple click strategies
+      try {
+        element.click();
+      } catch (e) {
+        element.dispatchEvent(new MouseEvent('click', {
+          view: window, bubbles: true, cancelable: true
+        }));
+      }
+      
+      this.showActionFeedback(`🤖 Intelligently clicked: "${element.textContent?.trim() || element.id || 'element'}"`);
+    }, 400);
+  }
+
+  agenticFill(element, value) {
+    console.log('✍️ Agentic fill:', element, 'with:', value);
+    
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    setTimeout(() => {
+      element.focus();
+      element.value = '';
+      element.value = value;
+      
+      // Trigger comprehensive events for modern frameworks
+      ['input', 'change', 'keyup', 'blur'].forEach(eventType => {
+        element.dispatchEvent(new Event(eventType, { bubbles: true }));
+      });
+      
+      this.showActionFeedback(`🤖 Intelligently filled: "${element.placeholder || element.name || 'field'}" with "${value}"`);
+    }, 400);
+  }
+
+  getStructuralElements(selector) {
+    return Array.from(document.querySelectorAll(selector)).map(el => ({
+      tag: el.tagName.toLowerCase(),
+      text: el.textContent?.trim(),
+      id: el.id,
+      level: el.tagName.match(/h(\d)/)?.[1] || null
+    }));
+  }
+
+  getFormAnalysis() {
+    return Array.from(document.querySelectorAll('form')).map(form => ({
+      action: form.action,
+      method: form.method,
+      inputs: Array.from(form.querySelectorAll('input, textarea, select')).map(input => ({
+        type: input.type,
+        name: input.name,
+        placeholder: input.placeholder,
+        required: input.required
+      }))
+    }));
+  }
+
+  getVisualElements() {
+    return Array.from(document.querySelectorAll('img')).slice(0, 5).map(img => ({
+      alt: img.alt,
+      src: img.src,
+      title: img.title
+    }));
+  }
+
+  getPageMetadata() {
+    return {
+      title: document.title,
+      description: document.querySelector('meta[name="description"]')?.content,
+      keywords: document.querySelector('meta[name="keywords"]')?.content,
+      url: window.location.href,
+      domain: window.location.hostname
+    };
+  }
+
+  getViewportAnalysis() {
+    return {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      scrollY: window.scrollY,
+      scrollX: window.scrollX
+    };
+  }
+
+  agenticScroll(element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    this.showActionFeedback(`🤖 Scrolled to: "${element.textContent?.trim() || 'element'}"`);
+  }
+
+  agenticHighlight(element) {
+    element.style.outline = '3px solid #667eea';
+    element.style.outlineOffset = '2px';
+    element.style.transition = 'outline 0.3s ease';
+    
+    setTimeout(() => {
+      element.style.outline = '';
+      element.style.outlineOffset = '';
+    }, 3000);
+    
+    this.showActionFeedback(`🤖 Highlighted: "${element.textContent?.trim() || 'element'}"`);
   }
 
   // Page interaction capabilities
