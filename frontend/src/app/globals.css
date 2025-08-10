@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes pulseDot {
+  0%, 60%, 100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(20px) translateX(-50%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(-50%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .chat-bubble {
+    @apply rounded-2xl px-4 py-3 max-w-xs sm:max-w-md break-words;
+  }
+  
+  .chat-bubble.user {
+    @apply bg-primary-500 text-white ml-auto rounded-br-md;
+  }
+  
+  .chat-bubble.assistant {
+    @apply bg-gray-100 text-gray-900 mr-auto rounded-bl-md border;
+  }
+  
+  .typing-dot {
+    @apply w-2 h-2 bg-gray-400 rounded-full inline-block;
+    animation: pulseDot 1.4s infinite;
+  }
+  
+  .typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  .typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  
+  .floating-chat {
+    @apply fixed bottom-4 right-4 z-50 bg-white rounded-xl shadow-2xl border border-gray-200;
+    width: 380px;
+    height: 500px;
+    max-height: calc(100vh - 2rem);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .floating-chat.collapsed {
+    @apply w-16 h-16;
+  }
+  
+  .border-l-3 {
+    border-left-width: 3px;
+  }
+  
+  .animate-in {
+    animation: slideIn 0.5s ease-out;
+  }
+  
+  .slide-in-from-bottom-5 {
+    animation: slideInFromBottom 0.5s ease-out;
+  }
+  
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(209 213 219) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgb(209 213 219);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(156 163 175);
+  }
+}

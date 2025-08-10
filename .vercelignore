@@ -1,0 +1,31 @@
+# Dependencies
+node_modules
+*/node_modules
+
+# Python
+backend/python-ai/venv
+*.pyc
+__pycache__
+
+# Development files
+.env.local
+.env.development
+*.log
+
+# Database
+database/migrations
+
+# Browser extension (not needed for web deployment)
+browser-extension
+
+# Documentation
+docs
+README.md
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea

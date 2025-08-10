@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIWatch Assistant</title>
+    <style>
+        body {
+            width: 350px;
+            min-height: 400px;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header .tagline {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10B981;
+        }
+
+        .status-dot.error {
+            background: #EF4444;
+        }
+
+        .content {
+            padding: 20px;
+            background: white;
+        }
+
+        .quick-actions {
+            margin-bottom: 20px;
+        }
+
+        .quick-actions h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            color: #374151;
+        }
+
+        .action-button {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border: none;
+            border-radius: 8px;
+            background: #f3f4f6;
+            color: #374151;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: left;
+            transition: background-color 0.2s ease;
+        }
+
+        .action-button:hover {
+            background: #e5e7eb;
+        }
+
+        .action-button.primary {
+            background: #6366f1;
+            color: white;
+        }
+
+        .action-button.primary:hover {
+            background: #4f46e5;
+        }
+
+        .settings {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 16px;
+        }
+
+        .settings h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            color: #374151;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .toggle {
+            position: relative;
+            width: 48px;
+            height: 24px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #6366f1;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .footer {
+            padding: 16px 20px;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #6366f1;
+            text-decoration: none;
+        }
+
+        .sparkle {
+            display: inline-block;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span class="sparkle">✨</span>AIWatch</h1>
+        <p class="tagline">Your AI-powered web assistant</p>
+        <div class="status-indicator">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Checking connection...</span>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="quick-actions">
+            <h3>Quick Actions</h3>
+            <button class="action-button primary" id="focusChat">
+                <span class="sparkle">💬</span>Open Chat on Current Page
+            </button>
+            <button class="action-button" id="analyzePage">
+                <span class="sparkle">🔍</span>Analyze Current Page
+            </button>
+            <button class="action-button" id="getSuggestions">
+                <span class="sparkle">💡</span>Get Proactive Suggestions
+            </button>
+        </div>
+
+        <div class="settings">
+            <h3>Settings</h3>
+            <div class="setting-row">
+                <span class="setting-label">Enable AIWatch</span>
+                <label class="toggle">
+                    <input type="checkbox" id="enabledToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Show on all websites</span>
+                <label class="toggle">
+                    <input type="checkbox" id="globalToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Powered by Claude AI • <a href="#" id="helpLink">Help & Support</a></p>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

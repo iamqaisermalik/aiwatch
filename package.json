@@ -1,0 +1,42 @@
+{
+  "name": "aiwatch",
+  "version": "1.0.0",
+  "description": "Universal Web Assistant - AI-powered contextual guidance for any website",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend/nodejs-api",
+    "browser-extension"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:api\" \"npm run dev:ai\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:api": "cd backend/nodejs-api && npm run dev",
+    "dev:ai": "cd backend/python-ai && python -m uvicorn main:app --reload --port 8001",
+    "dev:extension": "cd browser-extension && npm run dev",
+    "build": "npm run build:frontend && npm run build:api && npm run build:extension",
+    "build:frontend": "cd frontend && npm run build",
+    "build:api": "cd backend/nodejs-api && npm run build",
+    "build:extension": "cd browser-extension && npm run build",
+    "setup": "npm install && npm run setup:all",
+    "setup:all": "cd frontend && npm install && cd ../backend/nodejs-api && npm install && cd ../browser-extension && npm install",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "type-check": "cd frontend && npm run type-check && cd ../backend/nodejs-api && npm run type-check",
+    "vercel-build": "cd frontend && npm install && npm run build"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^9.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": ["ai", "assistant", "browser-extension", "web", "context", "guidance"],
+  "author": "Your Name",
+  "license": "MIT"
+}

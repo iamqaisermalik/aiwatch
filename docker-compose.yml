@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # Python AI Backend
+  python-ai:
+    build:
+      context: ./backend/python-ai
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - redis
+    volumes:
+      - ./backend/python-ai:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Node.js API Gateway
+  nodejs-api:
+    build:
+      context: ./backend/nodejs-api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:3000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - PYTHON_AI_URL=http://python-ai:8000
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - redis
+      - python-ai
+    volumes:
+      - ./backend/nodejs-api:/app
+    command: npm run dev
+
+  # Frontend Development (optional for local development)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+
+volumes:
+  redis_data:
