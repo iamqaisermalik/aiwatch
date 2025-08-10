@@ -7,6 +7,11 @@ class AIWatchInterface {
     this.isTyping = false;
     this.socket = null;
     this.currentContext = {};
+    this.isListening = false;
+    this.isSpeaking = false;
+    this.recognition = null;
+    this.synth = null;
+    this.apiUrl = 'https://aiwatch-nmtyvwy63-qaisers-projects-e9dbc08b.vercel.app/api';
     
     this.init();
   }
@@ -18,6 +23,9 @@ class AIWatchInterface {
     } else {
       this.createInterface();
     }
+    
+    // Initialize voice recognition
+    this.initVoiceRecognition();
     
     // Monitor page changes for context
     this.startContextMonitoring();
@@ -59,6 +67,9 @@ class AIWatchInterface {
           placeholder="Ask me anything about this page..."
           id="aiwatch-input"
         />
+        <button class="aiwatch-voice-button" id="aiwatch-voice" title="Voice input">
+          ${this.isListening ? '🔴' : '🎤'}
+        </button>
         <button class="aiwatch-send-button" id="aiwatch-send">Send</button>
       </div>
     `;
@@ -66,6 +77,7 @@ class AIWatchInterface {
     // Add event listeners
     const input = chatBox.querySelector('#aiwatch-input');
     const sendButton = chatBox.querySelector('#aiwatch-send');
+    const voiceButton = chatBox.querySelector('#aiwatch-voice');
 
     input.addEventListener('keypress', (e) => {
       if (e.key === 'Enter' && input.value.trim()) {
@@ -79,9 +91,15 @@ class AIWatchInterface {
       }
     });
 
-    // Focus on input when clicking anywhere on the collapsed box
-    chatBox.addEventListener('click', () => {
-      input.focus();
+    voiceButton.addEventListener('click', () => {
+      this.toggleVoiceRecognition();
+    });
+
+    // Focus on input when clicking anywhere on the collapsed box (except buttons)
+    chatBox.addEventListener('click', (e) => {
+      if (!e.target.closest('button')) {
+        input.focus();
+      }
     });
   }
 
@@ -144,6 +162,9 @@ class AIWatchInterface {
           placeholder="Ask me anything else..."
           id="aiwatch-input"
         />
+        <button class="aiwatch-voice-button" id="aiwatch-voice" title="Voice input">
+          ${this.isListening ? '🔴' : '🎤'}
+        </button>
         <button class="aiwatch-send-button" id="aiwatch-send">Send</button>
       </div>
     `;
@@ -151,6 +172,7 @@ class AIWatchInterface {
     // Add event listeners
     const input = chatBox.querySelector('#aiwatch-input');
     const sendButton = chatBox.querySelector('#aiwatch-send');
+    const voiceButton = chatBox.querySelector('#aiwatch-voice');
 
     input.addEventListener('keypress', (e) => {
       if (e.key === 'Enter' && input.value.trim()) {
@@ -162,6 +184,10 @@ class AIWatchInterface {
       if (input.value.trim()) {
         this.sendMessage(input.value.trim());
       }
+    });
+
+    voiceButton.addEventListener('click', () => {
+      this.toggleVoiceRecognition();
     });
 
     // Auto-focus input
@@ -202,7 +228,7 @@ class AIWatchInterface {
   }
 
   async sendViaRestAPI(message) {
-    const response = await fetch('http://localhost:8000/chat', {
+    const response = await fetch(`${this.apiUrl}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -236,6 +262,9 @@ class AIWatchInterface {
 
     this.messages.push(response);
     this.renderExpandedView(this.chatBox);
+    
+    // Speak the response
+    this.speakText(response.content);
   }
 
   handleError(errorMessage) {
@@ -251,39 +280,9 @@ class AIWatchInterface {
   }
 
   connectWebSocket() {
-    try {
-      this.socket = new WebSocket('ws://localhost:8000');
-      
-      this.socket.onopen = () => {
-        console.log('AIWatch: WebSocket connected');
-      };
-
-      this.socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'message') {
-          this.handleResponse(data);
-        } else if (data.type === 'typing') {
-          this.isTyping = data.isTyping;
-          if (this.isExpanded) {
-            this.renderExpandedView(this.chatBox);
-          }
-        }
-      };
-
-      this.socket.onclose = () => {
-        console.log('AIWatch: WebSocket disconnected, will use REST API fallback');
-        this.socket = null;
-      };
-
-      this.socket.onerror = (error) => {
-        console.warn('AIWatch: WebSocket error, falling back to REST API');
-        this.socket = null;
-      };
-    } catch (error) {
-      console.warn('AIWatch: Could not establish WebSocket connection, using REST API');
-      this.socket = null;
-    }
+    // Skip WebSocket for now, use REST API only
+    console.log('AIWatch: Using REST API for communication');
+    this.socket = null;
   }
 
   startContextMonitoring() {
@@ -351,6 +350,94 @@ class AIWatchInterface {
     
     // Return first 1000 characters to avoid token limits
     return content.slice(0, 1000).trim();
+  }
+
+  initVoiceRecognition() {
+    if (typeof window !== 'undefined') {
+      // Initialize Speech Recognition
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        this.recognition = new SpeechRecognition();
+        this.recognition.continuous = false;
+        this.recognition.interimResults = false;
+        this.recognition.lang = 'en-US';
+
+        this.recognition.onstart = () => {
+          this.isListening = true;
+          this.updateVoiceButtons();
+        };
+
+        this.recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          this.sendMessage(transcript);
+        };
+
+        this.recognition.onend = () => {
+          this.isListening = false;
+          this.updateVoiceButtons();
+        };
+
+        this.recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          this.isListening = false;
+          this.updateVoiceButtons();
+        };
+      }
+
+      // Initialize Speech Synthesis
+      if ('speechSynthesis' in window) {
+        this.synth = window.speechSynthesis;
+      }
+    }
+  }
+
+  toggleVoiceRecognition() {
+    if (!this.recognition) {
+      console.warn('Speech recognition not supported');
+      return;
+    }
+
+    if (this.isListening) {
+      this.recognition.stop();
+    } else {
+      this.recognition.start();
+    }
+  }
+
+  updateVoiceButtons() {
+    const voiceButtons = document.querySelectorAll('#aiwatch-voice');
+    voiceButtons.forEach(button => {
+      if (button) {
+        button.innerHTML = this.isListening ? '🔴' : '🎤';
+        button.title = this.isListening ? 'Stop listening' : 'Voice input';
+      }
+    });
+  }
+
+  speakText(text) {
+    if (this.synth && 'speechSynthesis' in window) {
+      // Stop any ongoing speech
+      this.synth.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 0.8;
+      
+      utterance.onstart = () => {
+        this.isSpeaking = true;
+      };
+      
+      utterance.onend = () => {
+        this.isSpeaking = false;
+      };
+      
+      utterance.onerror = () => {
+        this.isSpeaking = false;
+      };
+      
+      this.synth.speak(utterance);
+    }
   }
 }
 

@@ -83,6 +83,31 @@
   background: #4f46e5 !important;
 }
 
+.aiwatch-voice-button {
+  background: #10b981 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 50% !important;
+  width: 40px !important;
+  height: 40px !important;
+  cursor: pointer !important;
+  font-size: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s ease !important;
+  flex-shrink: 0 !important;
+}
+
+.aiwatch-voice-button:hover {
+  background: #059669 !important;
+  transform: scale(1.05) !important;
+}
+
+.aiwatch-voice-button:active {
+  transform: scale(0.95) !important;
+}
+
 .aiwatch-conversation {
   margin-bottom: 16px !important;
 }
