@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AIWatch API Test</title>
+</head>
+<body>
+    <h1>AIWatch API Test</h1>
+    <p>If you can see this page, the API should be accessible.</p>
+    <script>
+        // Test API endpoint
+        fetch('/api/chat', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.body.innerHTML += '<p>API Response: ' + JSON.stringify(data) + '</p>';
+        })
+        .catch(error => {
+            document.body.innerHTML += '<p>API Error: ' + error.message + '</p>';
+        });
+    </script>
+</body>
+</html>
