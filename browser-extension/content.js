@@ -67,8 +67,11 @@ class AIWatchInterface {
           placeholder="Ask me anything about this page..."
           id="aiwatch-input"
         />
-        <button class="aiwatch-voice-button" id="aiwatch-voice" title="Voice input">
-          ${this.isListening ? '🔴' : '🎤'}
+        <button class="aiwatch-voice-button ${this.isListening ? 'listening' : ''}" id="aiwatch-voice" title="Voice input">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+          </svg>
         </button>
         <button class="aiwatch-send-button" id="aiwatch-send">Send</button>
       </div>
@@ -162,8 +165,11 @@ class AIWatchInterface {
           placeholder="Ask me anything else..."
           id="aiwatch-input"
         />
-        <button class="aiwatch-voice-button" id="aiwatch-voice" title="Voice input">
-          ${this.isListening ? '🔴' : '🎤'}
+        <button class="aiwatch-voice-button ${this.isListening ? 'listening' : ''}" id="aiwatch-voice" title="Voice input">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+          </svg>
         </button>
         <button class="aiwatch-send-button" id="aiwatch-send">Send</button>
       </div>
@@ -249,10 +255,26 @@ class AIWatchInterface {
   handleResponse(data) {
     this.isTyping = false;
     
+    const responseText = data.response || data.content || 'I received your message!';
+    
+    // Check for action commands in the response
+    const actionCommands = this.extractActionCommands(responseText);
+    
+    // Execute actions if found
+    if (actionCommands.length > 0) {
+      actionCommands.forEach(action => {
+        setTimeout(() => this.executePageAction(action.type, action.target, action.value), 500);
+      });
+    }
+    
+    // Clean response text by removing action commands for display
+    const cleanedResponse = this.removeActionCommands(responseText);
+    
     const response = {
       type: 'answer',
-      content: data.response || data.content || 'I received your message!',
-      timestamp: new Date()
+      content: cleanedResponse,
+      timestamp: new Date(),
+      actions: actionCommands.length > 0 ? actionCommands : undefined
     };
 
     // Add suggestion if available
@@ -262,9 +284,26 @@ class AIWatchInterface {
 
     this.messages.push(response);
     this.renderExpandedView(this.chatBox);
-    
-    // Speak the response
-    this.speakText(response.content);
+  }
+
+  extractActionCommands(text) {
+    const actionRegex = /\[ACTION:(\w+):([^:\]]+)(?::([^\]]+))?\]/g;
+    const actions = [];
+    let match;
+
+    while ((match = actionRegex.exec(text)) !== null) {
+      actions.push({
+        type: match[1].toLowerCase(),
+        target: match[2],
+        value: match[3] || ''
+      });
+    }
+
+    return actions;
+  }
+
+  removeActionCommands(text) {
+    return text.replace(/\[ACTION:(\w+):([^:\]]+)(?::([^\]]+))?\]/g, '').trim();
   }
 
   handleError(errorMessage) {
@@ -340,16 +379,120 @@ class AIWatchInterface {
   }
 
   extractPageContent() {
-    // Get main text content, excluding navigation and footer
+    // Get comprehensive page information
+    const pageInfo = {
+      // Basic content
+      text: this.getMainTextContent(),
+      
+      // Interactive elements
+      forms: this.getPageForms(),
+      buttons: this.getPageButtons(),
+      links: this.getPageLinks(),
+      inputs: this.getPageInputs(),
+      
+      // Structure
+      headings: this.getPageHeadings(),
+      images: this.getPageImages(),
+      
+      // Meta info
+      meta: {
+        title: document.title,
+        description: document.querySelector('meta[name="description"]')?.content || '',
+        keywords: document.querySelector('meta[name="keywords"]')?.content || '',
+        url: window.location.href
+      }
+    };
+
+    return JSON.stringify(pageInfo).slice(0, 3000); // Increased limit for richer context
+  }
+
+  getMainTextContent() {
     const main = document.querySelector('main') || 
                   document.querySelector('article') || 
                   document.querySelector('[role="main"]') || 
                   document.body;
+    return main.textContent?.slice(0, 1000).trim() || '';
+  }
 
-    const content = main.textContent || '';
+  getPageForms() {
+    return Array.from(document.querySelectorAll('form')).map((form, index) => ({
+      index,
+      id: form.id || `form-${index}`,
+      action: form.action,
+      method: form.method,
+      inputs: Array.from(form.querySelectorAll('input, textarea, select')).length
+    }));
+  }
+
+  getPageButtons() {
+    return Array.from(document.querySelectorAll('button, input[type="submit"], input[type="button"]'))
+      .slice(0, 10)
+      .map((btn, index) => ({
+        index,
+        text: btn.textContent?.trim() || btn.value || btn.getAttribute('aria-label') || `button-${index}`,
+        type: btn.type,
+        id: btn.id,
+        class: btn.className
+      }));
+  }
+
+  getPageLinks() {
+    return Array.from(document.querySelectorAll('a[href]'))
+      .slice(0, 10)
+      .map((link, index) => ({
+        index,
+        text: link.textContent?.trim() || link.getAttribute('aria-label') || `link-${index}`,
+        href: link.href,
+        id: link.id
+      }));
+  }
+
+  getPageInputs() {
+    return Array.from(document.querySelectorAll('input, textarea, select'))
+      .slice(0, 10)
+      .map((input, index) => ({
+        index,
+        type: input.type,
+        name: input.name,
+        id: input.id,
+        placeholder: input.placeholder,
+        label: this.findLabelForInput(input),
+        required: input.required
+      }));
+  }
+
+  getPageHeadings() {
+    return Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+      .slice(0, 10)
+      .map((heading, index) => ({
+        level: heading.tagName.toLowerCase(),
+        text: heading.textContent?.trim() || `heading-${index}`,
+        id: heading.id
+      }));
+  }
+
+  getPageImages() {
+    return Array.from(document.querySelectorAll('img'))
+      .slice(0, 5)
+      .map((img, index) => ({
+        alt: img.alt || `image-${index}`,
+        src: img.src,
+        id: img.id
+      }));
+  }
+
+  findLabelForInput(input) {
+    // Try to find associated label
+    if (input.id) {
+      const label = document.querySelector(`label[for="${input.id}"]`);
+      if (label) return label.textContent?.trim();
+    }
     
-    // Return first 1000 characters to avoid token limits
-    return content.slice(0, 1000).trim();
+    // Try parent label
+    const parentLabel = input.closest('label');
+    if (parentLabel) return parentLabel.textContent?.trim();
+    
+    return '';
   }
 
   initVoiceRecognition() {
@@ -408,36 +551,148 @@ class AIWatchInterface {
     const voiceButtons = document.querySelectorAll('#aiwatch-voice');
     voiceButtons.forEach(button => {
       if (button) {
-        button.innerHTML = this.isListening ? '🔴' : '🎤';
+        button.className = `aiwatch-voice-button ${this.isListening ? 'listening' : ''}`;
         button.title = this.isListening ? 'Stop listening' : 'Voice input';
       }
     });
   }
 
-  speakText(text) {
-    if (this.synth && 'speechSynthesis' in window) {
-      // Stop any ongoing speech
-      this.synth.cancel();
-      
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      utterance.volume = 0.8;
-      
-      utterance.onstart = () => {
-        this.isSpeaking = true;
-      };
-      
-      utterance.onend = () => {
-        this.isSpeaking = false;
-      };
-      
-      utterance.onerror = () => {
-        this.isSpeaking = false;
-      };
-      
-      this.synth.speak(utterance);
+  // Page interaction capabilities
+  executePageAction(action, target, value = '') {
+    try {
+      switch (action.toLowerCase()) {
+        case 'click':
+          this.clickElement(target);
+          break;
+        case 'fill':
+        case 'type':
+          this.fillElement(target, value);
+          break;
+        case 'scroll':
+          this.scrollToElement(target);
+          break;
+        case 'highlight':
+          this.highlightElement(target);
+          break;
+        default:
+          console.warn('Unknown action:', action);
+      }
+    } catch (error) {
+      console.error('Error executing page action:', error);
     }
+  }
+
+  clickElement(selector) {
+    const elements = this.findElements(selector);
+    if (elements.length > 0) {
+      elements[0].click();
+      this.showActionFeedback(`Clicked: ${selector}`);
+      return true;
+    }
+    this.showActionFeedback(`Could not find element: ${selector}`, 'error');
+    return false;
+  }
+
+  fillElement(selector, value) {
+    const elements = this.findElements(selector);
+    if (elements.length > 0) {
+      const element = elements[0];
+      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+        element.value = value;
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+        this.showActionFeedback(`Filled "${selector}" with: ${value}`);
+        return true;
+      }
+    }
+    this.showActionFeedback(`Could not fill element: ${selector}`, 'error');
+    return false;
+  }
+
+  scrollToElement(selector) {
+    const elements = this.findElements(selector);
+    if (elements.length > 0) {
+      elements[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.showActionFeedback(`Scrolled to: ${selector}`);
+      return true;
+    }
+    return false;
+  }
+
+  highlightElement(selector) {
+    const elements = this.findElements(selector);
+    if (elements.length > 0) {
+      const element = elements[0];
+      element.style.outline = '3px solid #667eea';
+      element.style.outlineOffset = '2px';
+      setTimeout(() => {
+        element.style.outline = '';
+        element.style.outlineOffset = '';
+      }, 3000);
+      this.showActionFeedback(`Highlighted: ${selector}`);
+      return true;
+    }
+    return false;
+  }
+
+  findElements(selector) {
+    // Try multiple ways to find elements
+    try {
+      // Direct selector
+      let elements = Array.from(document.querySelectorAll(selector));
+      if (elements.length > 0) return elements;
+
+      // Try finding by text content
+      elements = Array.from(document.querySelectorAll('*')).filter(el => {
+        return el.textContent && el.textContent.toLowerCase().includes(selector.toLowerCase());
+      });
+      if (elements.length > 0) return elements.slice(0, 5); // Limit results
+
+      // Try finding by placeholder
+      elements = Array.from(document.querySelectorAll('input, textarea')).filter(el => {
+        return el.placeholder && el.placeholder.toLowerCase().includes(selector.toLowerCase());
+      });
+      if (elements.length > 0) return elements;
+
+      // Try finding by aria-label
+      elements = Array.from(document.querySelectorAll('[aria-label]')).filter(el => {
+        return el.getAttribute('aria-label').toLowerCase().includes(selector.toLowerCase());
+      });
+      if (elements.length > 0) return elements;
+
+    } catch (error) {
+      console.error('Error finding elements:', error);
+    }
+    return [];
+  }
+
+  showActionFeedback(message, type = 'success') {
+    // Create temporary feedback message
+    const feedback = document.createElement('div');
+    feedback.textContent = message;
+    feedback.style.cssText = `
+      position: fixed !important;
+      top: 20px !important;
+      right: 20px !important;
+      background: ${type === 'error' ? 'rgba(255, 59, 48, 0.9)' : 'rgba(52, 199, 89, 0.9)'} !important;
+      color: white !important;
+      padding: 12px 20px !important;
+      border-radius: 12px !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      backdrop-filter: blur(20px) !important;
+      z-index: 2147483647 !important;
+      transition: all 0.3s ease !important;
+    `;
+    
+    document.body.appendChild(feedback);
+    
+    setTimeout(() => {
+      feedback.style.opacity = '0';
+      feedback.style.transform = 'translateY(-20px)';
+      setTimeout(() => feedback.remove(), 300);
+    }, 2000);
   }
 }
 
